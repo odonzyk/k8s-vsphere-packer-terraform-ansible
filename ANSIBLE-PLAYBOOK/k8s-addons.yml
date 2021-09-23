@@ -29,7 +29,13 @@
 
 # Add Helm Chart repository
   - name:  Add official charts repository
-    shell:  helm repo add stable https://charts.helm.sh/stable
+    shell: helm repo add stable https://charts.helm.sh/stable
 
   - name:  Add bitnami repository
     shell: helm repo add bitnami https://charts.bitnami.com/bitnami
+
+  - name:  Update Repos
+    shell: helm repo update
+
+  - name:  Update Repos
+    shell: helm install nginx-ingress stable/nginx-ingress
