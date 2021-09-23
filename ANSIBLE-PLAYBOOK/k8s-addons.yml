@@ -1,0 +1,35 @@
+---
+- hosts: masters
+  become: true
+
+  tasks:
+  - name: Add an apt signing key for Kubernetes
+    apt_key:
+      url: https://baltocdn.com/helm/signing.asc
+      state: present
+
+  - name: Create kubernetes repo file
+    file:
+      path: "/etc/apt/sources.list.d/helm-stable-debian.list"
+      state: "touch"
+
+  - name: Adding apt repository for Kubernetes
+    apt_repository:
+      repo: deb https://baltocdn.com/helm/stable/debian/ all main
+      state: present
+      filename: helm-stable-debian.list
+
+  - name: Install apache httpd  (state=present is optional)
+    apt:
+      name: helm
+      state: present
+
+# can be implement better in next time with:
+# https://docs.ansible.com/ansible/latest/collections/community/kubernetes/helm_module.html
+
+# Add Helm Chart repository
+  - name:  Add official charts repository
+    shell:  helm repo add stable https://charts.helm.sh/stable
+
+  - name:  Add bitnami repository
+    shell: helm repo add bitnami https://charts.bitnami.com/bitnami
