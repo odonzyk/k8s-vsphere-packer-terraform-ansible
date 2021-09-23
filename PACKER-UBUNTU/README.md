@@ -5,13 +5,13 @@ The user-data and meta-data files are used for unattended installation of Ubuntu
 Packer uses these files and mounts them as CDROM’s to the vSphere guest VM.
 
 
-❯ tree .
-.
-├── http
-│   ├── meta-data
-│   └── user-data
-└── ubuntu-2004.json
-└── post-script.sh
+❯ tree .  
+.  
+├── http  
+│   ├── meta-data  
+│   └── user-data  
+└── ubuntu-2004.json  
+└── post-script.sh  
 
 
 The post-script.sh is needed, because it need some hack to get new IP's for all machines!
