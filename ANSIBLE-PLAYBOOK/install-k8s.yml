@@ -1,0 +1,161 @@
+---
+
+- hosts: "masters, workers"
+  remote_user: debian
+  become: yes
+  become_method: sudo
+  become_user: root
+  gather_facts: yes
+  connection: ssh
+
+  tasks:
+
+  - name: Update packages and autoremove no needed packages
+    apt:
+      update_cache: yes
+      cache_valid_time: 3600
+      upgrade: dist
+      autoremove: yes
+    register: output
+
+  - name: Install packages that allow apt to be used over HTTPS
+    apt:
+      name: "{{ packages }}"
+      state: present
+      cache_valid_time: 3600
+      update_cache: yes
+    vars:
+      packages:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg-agent
+        - software-properties-common
+        - acl
+        - net-tools
+        - mc
+
+  - name: modprobe use the OverlayFS storage driver for Docker and br_netfiter for Kubernetes
+    shell: |
+            modprobe overlay
+            modprobe br_netfilter
+
+  - name: Set system configurations for Kubernetes networking
+    file:
+      path: "/etc/sysctl.d/99-kubernetes-cri.conf"
+      state: "touch"
+
+  - name: Add conf for containerd
+    blockinfile:
+      path: "/etc/sysctl.d/99-kubernetes-cri.conf"
+      block: |
+            net.bridge.bridge-nf-call-iptables = 1
+            net.ipv4.ip_forward = 1
+            net.bridge.bridge-nf-call-ip6tables = 1
+
+# Docker
+  - name: Add an apt signing key for Docker
+    apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+
+  - name: Add apt repository for stable version
+    apt_repository:
+      repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
+      state: present
+
+  - name: Install docker and its dependecies
+    apt:
+      name: "{{ packages }}"
+      state: present
+      cache_valid_time: 3600
+      update_cache: yes
+    vars:
+      packages:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      notify:
+      - restart services
+
+# Swap
+  - name: disable swap
+    shell: |
+            swapoff -a
+            sed -i '/ swap / s/^/#/' /etc/fstab
+            sed -i '/\tswap\t/d' /etc/fstab
+
+# cgroup driver to systemd
+  - name: Add conf for docker - systemd
+    copy:
+      dest: "/etc/docker/daemon.json"
+      content: |
+                  {
+                    "exec-opts": ["native.cgroupdriver=systemd"]
+                  }
+
+# Kubernetes Repo
+  - name: Add an Apt signing key, uses whichever key is at the URL
+    ansible.builtin.apt_key:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+
+  - name: Add an apt signing key for Kubernetes
+    apt_key:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+
+  - name: Create kubernetes repo file
+    file:
+      path: "/etc/apt/sources.list.d/kubernetes.list"
+      state: "touch"
+
+  - name: Adding apt repository for Kubernetes
+    apt_repository:
+      repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+      state: present
+      filename: kubernetes.list
+
+  - name: install kubernetes
+    apt:
+      name: "{{ packages }}"
+      state: present
+      cache_valid_time: 3600
+      update_cache: yes
+    vars:
+      packages:
+      - kubelet
+      - kubeadm
+      - kubectl
+
+
+  - name: Create a directory if it does not exist
+    ansible.builtin.file:
+      path: /etc/vmware-tools/ 
+      state: directory
+      mode: '0755'
+
+
+# https://github.com/kubernetes/cloud-provider-vsphere/blob/master/docs/book/known_issues.md !!!
+# network exlusion
+  - name: Add Network exclusion
+    copy:
+      dest: "/etc/vmware-tools/tools.conf"
+      content: |
+                 [guestinfo]
+                   primary-nics=eth0
+                   exclude-nics=antrea-*,cali*,ovs-system,br*,flannel*,veth*,docker*,virbr*,vxlan_sys_*,genev_sys_*,gre_sys_*,stt_sys_*,????????-??????
+
+
+  handlers:
+    - name: restart daemon-reload
+      service: name=daemon-reload state=reload
+      listen: "restart services"
+
+    - name: restart docker
+      service: name=docker state=restart
+      listen: "restart services"
+
+    - name: restart kubelet
+      service: name=kubelet state=restart
+      listen: "restart services"

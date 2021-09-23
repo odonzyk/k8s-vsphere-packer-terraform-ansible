@@ -1,0 +1,7 @@
+[masters]
+k8s-controller-1 ansible_host=10.15.1.90 ansible_ssh_user=debian
+
+[workers]
+k8s-worker-1 ansible_host=10.15.1.73 ansible_ssh_user=debian
+k8s-worker-2 ansible_host=10.15.1.52 ansible_ssh_user=debian
+k8s-worker-3 ansible_host=10.15.1.59 ansible_ssh_user=debian

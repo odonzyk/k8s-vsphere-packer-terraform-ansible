@@ -1,0 +1,29 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US
+  keyboard:
+    layout: en
+    variant: us
+  network:
+    network:
+      version: 2
+      ethernets:
+        ens192:
+          dhcp4: true
+  storage:
+    layout:
+      name: lvm
+  identity:
+    hostname: ubuntu-packer-template
+    username: debian
+    password:<fill in here the encrypted password>
+  ssh:
+    install-server: yes
+    allow-pw: true
+    authorized-keys:
+      - ssh-rsa <fill in the ssh Key>
+  user-data:
+    disable_root: false
+  late-commands:
+    - "echo 'debian ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/debian"

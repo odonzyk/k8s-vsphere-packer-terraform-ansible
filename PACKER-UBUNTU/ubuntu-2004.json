@@ -1,0 +1,81 @@
+{
+
+  "provisioners": [
+    {
+      "execute_command": "echo 'packer' | {{.Vars}} sudo -S -E sh -eux '{{.Path}}'",
+      "scripts": [
+        "post-script.sh"
+      ],
+      "type": "shell"
+    }
+  ],
+
+
+  "variables": {    
+    "vsphere-server": "Server URL",
+    "vsphere-user": "Login Name",
+    "vsphere-password": "Password",
+    "vsphere-datacenter": "Data Center Name",    
+    "vsphere-cluster": "Cluster Name",    
+    "vsphere-network": "Network",
+    "vsphere-datastore": "Datastore",        
+    "vsphere_vm_folder": "your/folder/",
+    "vm-name": "ubuntu-packer-template",
+    "vm-login": "debian",
+    "vm-password": "Your Password",
+    "vm-cpu-num": "1",
+    "vm-mem-size": "8024",
+    "vm-disk-size": "50000",    
+    "iso_url": "[your Datastore] and/Path.iso"  
+  },
+  "builders": [
+    {
+      "type": "vsphere-iso",
+      "vcenter_server": "{{user `vsphere-server`}}",      
+      "username": "{{user `vsphere-user`}}",      
+      "password": "{{user `vsphere-password`}}",
+      "insecure_connection": "true",
+    
+      "datacenter": "{{user `vsphere-datacenter`}}",
+      "cluster": "{{user `vsphere-cluster`}}",      
+          
+
+      "datastore": "{{user `vsphere-datastore`}}",  
+      "folder": "{{user `vsphere_vm_folder`}}", 
+      "guest_os_type": "ubuntu64Guest",
+      "CPUs": 2,
+      "RAM": 8024,
+      "RAM_reserve_all": false,
+      "disk_controller_type": "pvscsi",
+      "storage": {
+        "disk_size": 50000,
+        "disk_thin_provisioned":true
+      },
+      "network_adapters": {
+        "network": "{{user `vsphere-network`}}", 
+        "network_card": "vmxnet3"
+      },
+
+      "vm_name": "{{user `vm-name`}}",      
+      "notes": "Build via Packer",            
+      "convert_to_template": true,
+
+      "ssh_username": "debian",
+      "ssh_password": "your Password",
+      "ssh_timeout": "20m",
+      "ssh_handshake_attempts": "100",
+
+      "iso_paths": ["{{user `iso_url`}}"], 
+
+      "cd_files": ["./http/user-data", "./http/meta-data"],
+      "cd_label": "cidata",
+      "boot_wait": "2s",
+      "boot_command": [
+        "<enter><wait2><enter><wait><f6><esc><wait>",
+        " autoinstall<wait2> ds=nocloud;",
+        "<wait><enter>"
+      ],
+      "shutdown_command": "echo 'debian'|sudo -S shutdown -P now" 
+    }
+  ]
+}
